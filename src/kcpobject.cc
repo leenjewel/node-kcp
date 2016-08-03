@@ -138,16 +138,17 @@ namespace node_kcp
         if (!args[0]->IsString()) {
             return;
         }
-        String::Utf8Value data(args[0]);
-        int len = data.length();
+        Local<String> data = args[0]->ToDetailString();
+        int len = data->Length();
         if (0 == len) {
             return;
         }
-        std::string buf(*data);
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        int t = ikcp_input(thiz->kcp, buf.c_str(), len);
-        Local<Number> ret = Number::New(isolate, t);
+        const String::ExternalOneByteStringResource* res = data->GetExternalOneByteStringResource();
+        const char* buf = res->data();
+        // int t = ikcp_input(thiz->kcp, data->GetExternalOneByteStringResource()->data(), len);
+        Local<Number> ret = Number::New(isolate, len);
         args.GetReturnValue().Set(ret);
     }
 
