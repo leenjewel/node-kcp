@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <string.h>
+#include <string>
 #include <stdio.h>
 #include "kcpobject.h"
 
@@ -41,15 +41,16 @@ namespace node_kcp
 
     int KCPObject::kcp_output(const char *buf, int len, ikcpcb *kcp, void *user)
     {
+        Isolate* isolate = Isolate::GetCurrent();
         KCPObject* thiz = (KCPObject*)user;
-        const char* data = new char[len]{0};
-        memcpy((void*)data, (void*)buf, len);
-        const unsigned argc = 1;
+        std::string data(buf, len);
+        const unsigned argc = 2;
         Local<Value> argv[argc] = {
-            String::NewFromUtf8(Isolate::GetCurrent(), data)
+            String::NewFromOneByte(isolate, (const uint8_t *)buf, v8::NewStringType::kInternalized, len).ToLocalChecked(),
+            Number::New(isolate, len)
         };
-        thiz->output->Call(Null(Isolate::GetCurrent()), argc, argv);
-        delete []data;
+        Local<Function> callback = Local<Function>::New(isolate, thiz->output);
+        callback->Call(Null(isolate), argc, argv);
         return len;
     }
 
@@ -142,14 +143,12 @@ namespace node_kcp
         if (0 == len) {
             return;
         }
+        std::string buf(*data);
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        char* buf = new char[len+1]{0};
-        strcpy(buf, *data);
-        int t = ikcp_input(thiz->kcp, (const char*)buf, len);
+        int t = ikcp_input(thiz->kcp, buf.c_str(), len);
         Local<Number> ret = Number::New(isolate, t);
         args.GetReturnValue().Set(ret);
-        delete []buf;
     }
 
     void KCPObject::Send(const v8::FunctionCallbackInfo<v8::Value>& args)
@@ -164,12 +163,10 @@ namespace node_kcp
         }
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        char* buf = new char[len+1]{0};
-        strcpy(buf, *data);
-        int t = ikcp_send(thiz->kcp, (const char*)buf, len);
+        std::string buf(*data);
+        int t = ikcp_send(thiz->kcp, buf.c_str(), len);
         Local<Number> ret = Number::New(isolate, t);
         args.GetReturnValue().Set(ret);
-        delete []buf;
     }
 
     void KCPObject::Output(const FunctionCallbackInfo<Value>& args)
@@ -178,7 +175,7 @@ namespace node_kcp
             return;
         }
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        thiz->output = Local<Function>::Cast(args[0]);
+        thiz->output.Reset(args.GetIsolate(), Local<Function>::Cast(args[0]));
     }
 
     void KCPObject::Update(const FunctionCallbackInfo<Value>& args)

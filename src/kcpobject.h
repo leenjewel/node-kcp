@@ -49,7 +49,7 @@ namespace node_kcp {
             static void SndbufCount(const v8::FunctionCallbackInfo<v8::Value>& args);
             static v8::Persistent<v8::Function> constructor;
             ikcpcb* kcp;
-            v8::Local<v8::Function> output;
+            v8::Persistent<v8::Function> output;
             static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
     };
 
