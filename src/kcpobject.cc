@@ -16,7 +16,7 @@
 
 #include "kcpobject.h"
 
-#define RECV_BUFFER_SIZE 4194304
+#define RECV_BUFFER_SIZE 4096
 
 #define string2char(string, len, out) \
     do {\
@@ -128,11 +128,21 @@ namespace node_kcp
     {
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        int len = -1;
         char* buf = new char[RECV_BUFFER_SIZE]{0};
-        int len = ikcp_recv(thiz->kcp, buf, RECV_BUFFER_SIZE);
-        if (len >= 0) {
-            args.GetReturnValue().Set(
+        Local<String> data = String::Empty(isolate);
+        while(1) {
+            len = ikcp_recv(thiz->kcp, buf, RECV_BUFFER_SIZE);
+            if (len < 0) {
+                break;
+            }
+            data = String::Concat(data,
                 String::NewFromOneByte(isolate, (const uint8_t *)buf, v8::NewStringType::kInternalized, len).ToLocalChecked()
+            );
+        }
+        if (data->Length()) {
+            args.GetReturnValue().Set(
+                data
             );
         }
         delete []buf;
