@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-#include <string>
-#include <stdio.h>
 #include "kcpobject.h"
 
 #define RECV_BUFFER_SIZE 4194304
+
+#define string2char(string, len, out) \
+    do {\
+    int __i__ = 0;\
+    for (; __i__ < len; __i__++) {\
+        out[__i__] = (char)((*string)[__i__]);\
+    }\
+    } while(0)
 
 namespace node_kcp
 {
@@ -43,7 +49,6 @@ namespace node_kcp
     {
         Isolate* isolate = Isolate::GetCurrent();
         KCPObject* thiz = (KCPObject*)user;
-        std::string data(buf, len);
         const unsigned argc = 2;
         Local<Value> argv[argc] = {
             String::NewFromOneByte(isolate, (const uint8_t *)buf, v8::NewStringType::kInternalized, len).ToLocalChecked(),
@@ -124,10 +129,10 @@ namespace node_kcp
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
         char* buf = new char[RECV_BUFFER_SIZE]{0};
-        int t = ikcp_recv(thiz->kcp, buf, RECV_BUFFER_SIZE);
-        if (t >= 0) {
+        int len = ikcp_recv(thiz->kcp, buf, RECV_BUFFER_SIZE);
+        if (len >= 0) {
             args.GetReturnValue().Set(
-                String::NewFromUtf8(isolate, (const char*)buf)
+                String::NewFromOneByte(isolate, (const uint8_t *)buf, v8::NewStringType::kInternalized, len).ToLocalChecked()
             );
         }
         delete []buf;
@@ -138,18 +143,19 @@ namespace node_kcp
         if (!args[0]->IsString()) {
             return;
         }
-        Local<String> data = args[0]->ToDetailString();
-        int len = data->Length();
+        String::Value data(args[0]);
+        int len = data.length();
         if (0 == len) {
             return;
         }
+        char* buf = new char[len]{0};
+        string2char(data, len, buf);
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        const String::ExternalOneByteStringResource* res = data->GetExternalOneByteStringResource();
-        const char* buf = res->data();
-        // int t = ikcp_input(thiz->kcp, data->GetExternalOneByteStringResource()->data(), len);
-        Local<Number> ret = Number::New(isolate, len);
+        int t = ikcp_input(thiz->kcp, (const char*)buf, len);
+        Local<Number> ret = Number::New(isolate, t);
         args.GetReturnValue().Set(ret);
+        delete []buf;
     }
 
     void KCPObject::Send(const v8::FunctionCallbackInfo<v8::Value>& args)
@@ -157,17 +163,19 @@ namespace node_kcp
         if (!args[0]->IsString()) {
             return;
         }
-        String::Utf8Value data(args[0]);
+        String::Value data(args[0]);
         int len = data.length();
         if (0 == len) {
             return;
         }
+        char* buf = new char[len]{0};
+        string2char(data, len, buf);
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        std::string buf(*data);
-        int t = ikcp_send(thiz->kcp, buf.c_str(), len);
+        int t = ikcp_send(thiz->kcp, (const char*)buf, len);
         Local<Number> ret = Number::New(isolate, t);
         args.GetReturnValue().Set(ret);
+        delete []buf;
     }
 
     void KCPObject::Output(const FunctionCallbackInfo<Value>& args)
