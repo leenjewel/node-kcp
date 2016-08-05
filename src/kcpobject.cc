@@ -15,6 +15,8 @@
  */
 
 #include "kcpobject.h"
+#include "node_buffer.h"
+#include <string.h>
 
 #define RECV_BUFFER_SIZE 4096
 
@@ -49,13 +51,27 @@ namespace node_kcp
     {
         Isolate* isolate = Isolate::GetCurrent();
         KCPObject* thiz = (KCPObject*)user;
-        const unsigned argc = 2;
-        Local<Value> argv[argc] = {
-            String::NewFromOneByte(isolate, (const uint8_t *)buf, v8::NewStringType::kInternalized, len).ToLocalChecked(),
-            Number::New(isolate, len)
-        };
-        Local<Function> callback = Local<Function>::New(isolate, thiz->output);
-        callback->Call(Null(isolate), argc, argv);
+        if (thiz->output.IsEmpty()) {
+            return len;
+        }
+        if (thiz->context.IsEmpty()) {
+            const unsigned argc = 2;
+            Local<Value> argv[argc] = {
+                node::Buffer::Copy(isolate, buf, len).ToLocalChecked(),
+                Number::New(isolate, len)
+            };
+            Local<Function> callback = Local<Function>::New(isolate, thiz->output);
+            callback->Call(Null(isolate), argc, argv);
+        } else {
+            const unsigned argc = 3;
+            Local<Value> argv[argc] = {
+                node::Buffer::Copy(isolate, buf, len).ToLocalChecked(),
+                Number::New(isolate, len),
+                Local<Object>::New(isolate, thiz->context)
+            };
+            Local<Function> callback = Local<Function>::New(isolate, thiz->output);
+            callback->Call(Null(isolate), argc, argv);
+        }
         return len;
     }
 
@@ -71,6 +87,12 @@ namespace node_kcp
             ikcp_release(kcp);
             kcp = NULL;
         }
+        if (!output.IsEmpty()) {
+            output.Reset();
+        }
+        if (!context.IsEmpty()) {
+            context.Reset();
+        }
     }
 
     void KCPObject::Init(Local<Object> exports)
@@ -81,6 +103,8 @@ namespace node_kcp
         tpl->SetClassName(String::NewFromUtf8(isolate, "KCPObject"));
         tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
+        NODE_SET_PROTOTYPE_METHOD(tpl, "release", Release);
+        NODE_SET_PROTOTYPE_METHOD(tpl, "context", GetContext);
         NODE_SET_PROTOTYPE_METHOD(tpl, "recv", Recv);
         NODE_SET_PROTOTYPE_METHOD(tpl, "send", Send);
         NODE_SET_PROTOTYPE_METHOD(tpl, "input", Input);
@@ -114,78 +138,139 @@ namespace node_kcp
         if (args.IsConstructCall()) {
             uint32_t conv = args[0]->Uint32Value();
             KCPObject* kcpobj = new KCPObject(conv, 0);
+            if (args[1]->IsObject()) {
+                kcpobj->context.Reset(isolate, Local<Object>::Cast(args[1]));
+            }
             kcpobj->Wrap(args.This());
             args.GetReturnValue().Set(args.This());
         } else {
-            isolate->ThrowException(Exception::Error(
-                String::NewFromUtf8(isolate, "Must to use new")
-            ));
-            return;
+            Local<Value> argv[2] = {
+                args[0],
+                args[1]
+            };
+            Local<Context> context = isolate->GetCurrentContext();
+            Local<Function> cons = Local<Function>::New(isolate, constructor);
+            Local<Object> ret = cons->NewInstance(context, 2, argv).ToLocalChecked();
+            args.GetReturnValue().Set(ret);
         }
+    }
+
+    void KCPObject::GetContext(const v8::FunctionCallbackInfo<v8::Value>& args)
+    {
+        Isolate* isolate = args.GetIsolate();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        if (!thiz->context.IsEmpty()) {
+            args.GetReturnValue().Set(Local<Object>::New(isolate, thiz->context));
+        }
+    }
+
+    void KCPObject::Release(const v8::FunctionCallbackInfo<v8::Value>& args)
+    {
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        delete thiz;
     }
 
     void KCPObject::Recv(const v8::FunctionCallbackInfo<v8::Value>& args)
     {
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        int len = -1;
-        char* buf = new char[RECV_BUFFER_SIZE]{0};
-        Local<String> data = String::Empty(isolate);
+        int bufsize = 0;
+        char* buf = NULL;
+        int buflen = 0;
+        char* data = NULL;
+        int len = 0;
+        char* tmp = NULL;
+        int tmplen = 0;
         while(1) {
-            len = ikcp_recv(thiz->kcp, buf, RECV_BUFFER_SIZE);
-            if (len < 0) {
+            tmplen = buflen;
+            bufsize = ikcp_peeksize(thiz->kcp);
+            if (bufsize <= 0) {
+                bufsize = RECV_BUFFER_SIZE;
+            }
+            buf = (char*)malloc(bufsize);
+            buflen = ikcp_recv(thiz->kcp, buf, bufsize);
+            if (buflen < 0) {
+                free(buf);
                 break;
             }
-            data = String::Concat(data,
-                String::NewFromOneByte(isolate, (const uint8_t *)buf, v8::NewStringType::kInternalized, len).ToLocalChecked()
-            );
+            len += buflen;
+            tmp = data;
+            data = (char*)malloc(len);
+            if (NULL != tmp) {
+                memcpy(data, tmp, tmplen);
+                free(tmp);
+            }
+            memcpy(data, buf, buflen);
+            free(buf);
         }
-        if (data->Length()) {
+        if (len > 0) {
             args.GetReturnValue().Set(
-                data
+                node::Buffer::Copy(isolate, (const char*)data, len).ToLocalChecked()
             );
         }
-        delete []buf;
+        free(data);
     }
 
     void KCPObject::Input(const v8::FunctionCallbackInfo<v8::Value>& args)
     {
-        if (!args[0]->IsString()) {
-            return;
-        }
-        String::Value data(args[0]);
-        int len = data.length();
-        if (0 == len) {
-            return;
-        }
-        char* buf = new char[len]{0};
-        string2char(data, len, buf);
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        int t = ikcp_input(thiz->kcp, (const char*)buf, len);
-        Local<Number> ret = Number::New(isolate, t);
-        args.GetReturnValue().Set(ret);
-        delete []buf;
+        char* buf = NULL;
+        int len = 0;
+        Local<Value> arg0 = args[0];
+        if (arg0->IsString()) {
+            String::Value data(arg0);
+            len = data.length();
+            if (0 == len) {
+                return;
+            }
+            buf = new char[len]{0};
+            string2char(data, len, buf);
+            int t = ikcp_input(thiz->kcp, (const char*)buf, len);
+            Local<Number> ret = Number::New(isolate, t);
+            args.GetReturnValue().Set(ret);
+            delete []buf;
+        } else if (node::Buffer::HasInstance(arg0)) {
+            len = node::Buffer::Length(arg0->ToObject());
+            if (0 == len) {
+                return;
+            }
+            buf = node::Buffer::Data(arg0->ToObject());
+            int t = ikcp_input(thiz->kcp, (const char*)buf, len);
+            Local<Number> ret = Number::New(isolate, t);
+            args.GetReturnValue().Set(ret);
+        }
     }
 
     void KCPObject::Send(const v8::FunctionCallbackInfo<v8::Value>& args)
     {
-        if (!args[0]->IsString()) {
-            return;
-        }
-        String::Value data(args[0]);
-        int len = data.length();
-        if (0 == len) {
-            return;
-        }
-        char* buf = new char[len]{0};
-        string2char(data, len, buf);
         Isolate* isolate = args.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        int t = ikcp_send(thiz->kcp, (const char*)buf, len);
-        Local<Number> ret = Number::New(isolate, t);
-        args.GetReturnValue().Set(ret);
-        delete []buf;
+        char* buf = NULL;
+        int len = 0;
+        Local<Value> arg0 = args[0];
+        if (arg0->IsString()) {
+            String::Value data(arg0);
+            len = data.length();
+            if (0 == len) {
+                return;
+            }
+            buf = new char[len]{0};
+            string2char(data, len, buf);
+            int t = ikcp_send(thiz->kcp, (const char*)buf, len);
+            Local<Number> ret = Number::New(isolate, t);
+            args.GetReturnValue().Set(ret);
+            delete []buf;
+        } else if (node::Buffer::HasInstance(arg0)) {
+            len = node::Buffer::Length(arg0->ToObject());
+            if (0 == len) {
+                return;
+            }
+            buf = node::Buffer::Data(arg0->ToObject());
+            int t = ikcp_send(thiz->kcp, (const char*)buf, len);
+            Local<Number> ret = Number::New(isolate, t);
+            args.GetReturnValue().Set(ret);
+        }
     }
 
     void KCPObject::Output(const FunctionCallbackInfo<Value>& args)

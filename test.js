@@ -1,10 +1,12 @@
 var kcp = require('./build/Release/kcp');
 var kcpobj1 = new kcp.KCP(123);
-var kcpobj2 = new kcp.KCP(123);
-kcpobj1.output(function(data, size){
+var kcpobj2 = new kcp.KCP(123, {name : 'kcpobj2'});
+kcpobj1.output(function(data, size, context){
+    console.dir(context);
     kcpobj2.input(data);
 });
-kcpobj2.output(function(data){
+kcpobj2.output(function(data, size, context){
+    console.dir(context);
 	kcpobj1.input(data);
 });
 var packageindex = 1;

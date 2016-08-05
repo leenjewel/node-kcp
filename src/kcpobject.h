@@ -33,6 +33,8 @@ namespace node_kcp {
             ~KCPObject();
 
             static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
+            static void Release(const v8::FunctionCallbackInfo<v8::Value>& args);
+            static void GetContext(const v8::FunctionCallbackInfo<v8::Value>& args);
             static void Recv(const v8::FunctionCallbackInfo<v8::Value>& args);
             static void Send(const v8::FunctionCallbackInfo<v8::Value>& args);
             static void Output(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -48,9 +50,10 @@ namespace node_kcp {
             static void RcvbufCount(const v8::FunctionCallbackInfo<v8::Value>& args);
             static void SndbufCount(const v8::FunctionCallbackInfo<v8::Value>& args);
             static v8::Persistent<v8::Function> constructor;
+            static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
             ikcpcb* kcp;
             v8::Persistent<v8::Function> output;
-            static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
+            v8::Persistent<v8::Object> context;
     };
 
 }
