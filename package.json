@@ -1,6 +1,6 @@
 {
   "name": "node-kcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "KCP protocol for Node.js",
   "main": "node-kcp.node",
   "dependencies": {},

@@ -390,21 +390,5 @@ namespace node_kcp
         args.GetReturnValue().Set(ret);
     }
 
-    void KCPObject::RcvbufCount(const v8::FunctionCallbackInfo<v8::Value>& args)
-    {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_rcvbuf_count(thiz->kcp));
-        args.GetReturnValue().Set(ret);
-    }
-
-    void KCPObject::SndbufCount(const v8::FunctionCallbackInfo<v8::Value>& args)
-    {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_sndbuf_count(thiz->kcp));
-        args.GetReturnValue().Set(ret);
-    }
-
 }
 

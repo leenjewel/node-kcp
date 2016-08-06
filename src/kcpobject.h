@@ -47,8 +47,6 @@ namespace node_kcp {
             static void Wndsize(const v8::FunctionCallbackInfo<v8::Value>& args);
             static void Waitsnd(const v8::FunctionCallbackInfo<v8::Value>& args);
             static void Nodelay(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void RcvbufCount(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void SndbufCount(const v8::FunctionCallbackInfo<v8::Value>& args);
             static v8::Persistent<v8::Function> constructor;
             static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
             ikcpcb* kcp;
