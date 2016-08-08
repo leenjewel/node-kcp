@@ -38,6 +38,7 @@ namespace node_kcp
     using v8::Local;
     using v8::MaybeLocal;
     using v8::Number;
+    using v8::Integer;
     using v8::Object;
     using v8::Persistent;
     using v8::String;
@@ -117,8 +118,6 @@ namespace node_kcp
         NODE_SET_PROTOTYPE_METHOD(tpl, "wndsize", Wndsize);
         NODE_SET_PROTOTYPE_METHOD(tpl, "waitsnd", Waitsnd);
         NODE_SET_PROTOTYPE_METHOD(tpl, "nodelay", Nodelay);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "rcvbufcount", RcvbufCount);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "sndbufcount", SndbufCount);
 
         constructor.Reset(isolate, tpl->GetFunction());
         exports->Set(String::NewFromUtf8(isolate, "KCP"),
@@ -293,7 +292,8 @@ namespace node_kcp
             return;
         }
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        uint32_t current = args[0]->Uint32Value();
+        auto arg0 = args[0]->IntegerValue();
+        IUINT32 current = (IUINT32)(arg0 & 0xfffffffful);
         ikcp_update(thiz->kcp, current);
     }
 
@@ -309,9 +309,10 @@ namespace node_kcp
         }
 
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        uint32_t current = args[0]->Uint32Value();
-        IUINT32 ret = ikcp_check(thiz->kcp, current);
-        Local<Number> num = Number::New(isolate, ret);
+        auto arg0 = args[0]->IntegerValue();
+        IUINT32 current = (IUINT32)(arg0 & 0xfffffffful);
+        IUINT32 ret = ikcp_check(thiz->kcp, current) - current;
+        Local<Integer> num = Integer::NewFromUnsigned(isolate, (uint32_t)(ret>0?ret:0));
         args.GetReturnValue().Set(num);
     }
 
