@@ -223,12 +223,17 @@ namespace node_kcp
             if (0 == len) {
                 return;
             }
-            buf = new char[len]{0};
+            if (!(buf = (char*)malloc(len))) {
+                isolate->ThrowException(Exception::Error(
+                    String::NewFromUtf8(isolate, "malloc error")
+                ));
+                return;
+            }
             string2char(data, len, buf);
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Number::New(isolate, t);
             args.GetReturnValue().Set(ret);
-            delete []buf;
+            free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
             len = node::Buffer::Length(arg0->ToObject());
             if (0 == len) {
@@ -254,12 +259,17 @@ namespace node_kcp
             if (0 == len) {
                 return;
             }
-            buf = new char[len]{0};
+            if (!(buf = (char*)malloc(len))) {
+                isolate->ThrowException(Exception::Error(
+                    String::NewFromUtf8(isolate, "malloc error")
+                ));
+                return;
+            }
             string2char(data, len, buf);
             int t = ikcp_send(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Number::New(isolate, t);
             args.GetReturnValue().Set(ret);
-            delete []buf;
+            free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
             len = node::Buffer::Length(arg0->ToObject());
             if (0 == len) {
