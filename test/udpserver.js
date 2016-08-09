@@ -1,7 +1,8 @@
-var kcp = require('./build/Release/kcp');
+var kcp = require('./../build/Release/kcp');
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
 var clients = {};
+var interval = 200;
 
 var output = function(data, size, context) {
     server.send(data, 0, size, context.port, context.address);
@@ -20,6 +21,7 @@ server.on('message', (msg, rinfo) => {
             port : rinfo.port
         };
         var kcpobj = new kcp.KCP(123, context);
+        kcpobj.nodelay(0, interval, 0, 0);
         kcpobj.output(output);
         clients[k] = kcpobj;
     }
@@ -40,7 +42,7 @@ server.on('listening', () => {
            		kcpobj.send('RE-'+recv);
        	 	}
        	}
-    }, 200);
+    }, interval);
 });
 
 server.bind(41234);

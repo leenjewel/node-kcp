@@ -1,9 +1,12 @@
-var kcp = require('./build/Release/kcp');
+var kcp = require('./../build/Release/kcp');
 var kcpobj = new kcp.KCP(123, {address: '127.0.0.1', port: 41234});
 var dgram = require('dgram');
 var client = dgram.createSocket('udp4');
 var msg = 'hello----------------------------------------------------------world';
 var idx = 1;
+var interval = 200;
+
+kcpobj.nodelay(0, interval, 0, 0);
 
 kcpobj.output((data, size, context) => {
     client.send(data, 0, size, context.port, context.address);
@@ -25,6 +28,6 @@ setInterval(() => {
         console.log(`client recv ${recv}`);
         kcpobj.send(msg+(idx++));
     }
-}, 200);
+}, interval);
 
 kcpobj.send(msg+(idx++));
