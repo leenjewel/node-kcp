@@ -34,7 +34,6 @@ namespace node_kcp
     using v8::Function;
     using Nan::FunctionCallbackInfo;
     using v8::FunctionTemplate;
-    using v8::Isolate;
     using v8::Local;
     using Nan::MaybeLocal;
     using v8::Number;
@@ -54,7 +53,6 @@ namespace node_kcp
 
     int KCPObject::kcp_output(const char *buf, int len, ikcpcb *kcp, void *user)
     {
-        Isolate* isolate = Isolate::GetCurrent();
         KCPObject* thiz = (KCPObject*)user;
         if (thiz->output.IsEmpty()) {
             return len;
@@ -62,19 +60,19 @@ namespace node_kcp
         if (thiz->context.IsEmpty()) {
             const unsigned argc = 2;
             Local<Value> argv[argc] = {
-                node::Buffer::Copy(isolate, buf, len).ToLocalChecked(),
-                Number::New(isolate, len)
+                Nan::CopyBuffer(buf, len).ToLocalChecked(),
+                Nan::New<Number>(len)
             };
-            Callback callback(Local<Function>::New(isolate, thiz->output));
+            Callback callback(Nan::New<Function>(thiz->output));
             callback.Call(argc, argv);
         } else {
             const unsigned argc = 3;
             Local<Value> argv[argc] = {
-                node::Buffer::Copy(isolate, buf, len).ToLocalChecked(),
-                Number::New(isolate, len),
-                Local<Object>::New(isolate, thiz->context)
+                Nan::CopyBuffer(buf, len).ToLocalChecked(),
+                Nan::New<Number>(len),
+                Nan::New<Object>(thiz->context)
             };
-            Callback callback(Local<Function>::New(isolate, thiz->output));
+            Callback callback(Nan::New<Function>(thiz->output));
             callback.Call(argc, argv);
         }
         return len;
@@ -151,10 +149,9 @@ namespace node_kcp
 
     NAN_METHOD(KCPObject::GetContext)
     {
-        Isolate* isolate = info.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         if (!thiz->context.IsEmpty()) {
-            info.GetReturnValue().Set(Local<Object>::New(isolate, thiz->context));
+            info.GetReturnValue().Set(Nan::New<Object>(thiz->context));
         }
     }
 
@@ -166,7 +163,6 @@ namespace node_kcp
 
     NAN_METHOD(KCPObject::Recv)
     {
-        Isolate* isolate = info.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         int bufsize = 0;
         char* buf = NULL;
@@ -199,7 +195,7 @@ namespace node_kcp
         }
         if (len > 0) {
             info.GetReturnValue().Set(
-                node::Buffer::Copy(isolate, (const char*)data, len).ToLocalChecked()
+                Nan::CopyBuffer((const char*)data, len).ToLocalChecked()
             );
         }
         free(data);
@@ -207,7 +203,6 @@ namespace node_kcp
 
     NAN_METHOD(KCPObject::Input)
     {
-        Isolate* isolate = info.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
@@ -219,14 +214,12 @@ namespace node_kcp
                 return;
             }
             if (!(buf = (char*)malloc(len))) {
-                isolate->ThrowException(Exception::Error(
-                    String::NewFromUtf8(isolate, "malloc error")
-                ));
+                Nan::ThrowError("malloc error");
                 return;
             }
             string2char(data, len, buf);
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
-            Local<Number> ret = Number::New(isolate, t);
+            Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
             free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
@@ -236,14 +229,13 @@ namespace node_kcp
             }
             buf = node::Buffer::Data(arg0->ToObject());
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
-            Local<Number> ret = Number::New(isolate, t);
+            Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
         }
     }
 
     NAN_METHOD(KCPObject::Send)
     {
-        Isolate* isolate = info.GetIsolate();
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
@@ -255,14 +247,12 @@ namespace node_kcp
                 return;
             }
             if (!(buf = (char*)malloc(len))) {
-                isolate->ThrowException(Exception::Error(
-                    String::NewFromUtf8(isolate, "malloc error")
-                ));
+                Nan::ThrowError("malloc error");
                 return;
             }
             string2char(data, len, buf);
             int t = ikcp_send(thiz->kcp, (const char*)buf, len);
-            Local<Number> ret = Number::New(isolate, t);
+            Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
             free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
@@ -272,7 +262,7 @@ namespace node_kcp
             }
             buf = node::Buffer::Data(arg0->ToObject());
             int t = ikcp_send(thiz->kcp, (const char*)buf, len);
-            Local<Number> ret = Number::New(isolate, t);
+            Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
         }
     }
