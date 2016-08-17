@@ -32,6 +32,7 @@ describe('Test node-kcp', function(){
                 kcpobj1.update(Date.now());
             }, interval);
             kcpobj1.output(function(data, size, context){
+                expect(context.name).to.be.equal('kcpobj1');
                 expect(kcpobj2.input(data)).to.be.equal(0);
                 clearTimeout(kcpobj1TID);
                 done();

@@ -32,19 +32,23 @@ namespace node_kcp
 {
     using v8::Context;
     using v8::Function;
-    using v8::FunctionCallbackInfo;
+    using Nan::FunctionCallbackInfo;
     using v8::FunctionTemplate;
     using v8::Isolate;
     using v8::Local;
-    using v8::MaybeLocal;
+    using Nan::MaybeLocal;
     using v8::Number;
     using v8::Integer;
     using v8::Object;
-    using v8::Persistent;
+    using Nan::Persistent;
     using v8::String;
     using v8::Value;
     using v8::Exception;
-    using v8::Null;
+    using Nan::Null;
+    using Nan::Callback;
+    using Nan::GetFunction;
+    using Nan::Set;
+    using Nan::To;
 
     Persistent<Function> KCPObject::constructor;
 
@@ -61,8 +65,8 @@ namespace node_kcp
                 node::Buffer::Copy(isolate, buf, len).ToLocalChecked(),
                 Number::New(isolate, len)
             };
-            Local<Function> callback = Local<Function>::New(isolate, thiz->output);
-            callback->Call(Null(isolate), argc, argv);
+            Callback callback(Local<Function>::New(isolate, thiz->output));
+            callback.Call(argc, argv);
         } else {
             const unsigned argc = 3;
             Local<Value> argv[argc] = {
@@ -70,13 +74,13 @@ namespace node_kcp
                 Number::New(isolate, len),
                 Local<Object>::New(isolate, thiz->context)
             };
-            Local<Function> callback = Local<Function>::New(isolate, thiz->output);
-            callback->Call(Null(isolate), argc, argv);
+            Callback callback(Local<Function>::New(isolate, thiz->output));
+            callback.Call(argc, argv);
         }
         return len;
     }
 
-    KCPObject::KCPObject(IUINT32 conv, void* user)
+    KCPObject::KCPObject(IUINT32 conv)
     {
         kcp = ikcp_create(conv, this);
         kcp->output = KCPObject::kcp_output;
@@ -96,83 +100,74 @@ namespace node_kcp
         }
     }
 
-    void KCPObject::Init(Local<Object> exports)
+    NAN_MODULE_INIT(KCPObject::Init)
     {
-        Isolate* isolate = exports->GetIsolate();
-
-        Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-        tpl->SetClassName(String::NewFromUtf8(isolate, "KCPObject"));
+        Local<FunctionTemplate> tpl = Nan::New<FunctionTemplate>(New);
+        tpl->SetClassName(Nan::New("KCPObject").ToLocalChecked());
         tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-        NODE_SET_PROTOTYPE_METHOD(tpl, "release", Release);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "context", GetContext);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "recv", Recv);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "send", Send);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "input", Input);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "output", Output);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "check", Check);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "flush", Flush);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "peeksize", Peeksize);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "setmtu", Setmtu);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "wndsize", Wndsize);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "waitsnd", Waitsnd);
-        NODE_SET_PROTOTYPE_METHOD(tpl, "nodelay", Nodelay);
+        SetPrototypeMethod(tpl, "release", Release);
+        SetPrototypeMethod(tpl, "context", GetContext);
+        SetPrototypeMethod(tpl, "recv", Recv);
+        SetPrototypeMethod(tpl, "send", Send);
+        SetPrototypeMethod(tpl, "input", Input);
+        SetPrototypeMethod(tpl, "output", Output);
+        SetPrototypeMethod(tpl, "update", Update);
+        SetPrototypeMethod(tpl, "check", Check);
+        SetPrototypeMethod(tpl, "flush", Flush);
+        SetPrototypeMethod(tpl, "peeksize", Peeksize);
+        SetPrototypeMethod(tpl, "setmtu", Setmtu);
+        SetPrototypeMethod(tpl, "wndsize", Wndsize);
+        SetPrototypeMethod(tpl, "waitsnd", Waitsnd);
+        SetPrototypeMethod(tpl, "nodelay", Nodelay);
 
-        constructor.Reset(isolate, tpl->GetFunction());
-        exports->Set(String::NewFromUtf8(isolate, "KCP"),
-                tpl->GetFunction());
+        constructor.Reset(GetFunction(tpl).ToLocalChecked());
+        Set(target, Nan::New("KCP").ToLocalChecked(), GetFunction(tpl).ToLocalChecked());
     }
 
-    void KCPObject::New(const FunctionCallbackInfo<Value>& args)
+    NAN_METHOD(KCPObject::New)
     {
-        Isolate* isolate = args.GetIsolate();
-
-        if (!args[0]->IsNumber()) {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "Wrong arguments")
-            ));
+        if (!info[0]->IsNumber()) {
+            Nan::ThrowTypeError("kcp.KCP 1 arg must be number");
             return;
         }
-        if (args.IsConstructCall()) {
-            uint32_t conv = args[0]->Uint32Value();
-            KCPObject* kcpobj = new KCPObject(conv, 0);
-            if (args[1]->IsObject()) {
-                kcpobj->context.Reset(isolate, Local<Object>::Cast(args[1]));
+        if (info.IsConstructCall()) {
+            uint32_t conv = To<uint32_t>(info[0]).FromJust();
+            KCPObject* kcpobj = new KCPObject(conv);
+            if (info[1]->IsObject()) {
+                kcpobj->context.Reset(Local<Object>::Cast(info[1]));
             }
-            kcpobj->Wrap(args.This());
-            args.GetReturnValue().Set(args.This());
+            kcpobj->Wrap(info.This());
+            info.GetReturnValue().Set(info.This());
         } else {
             Local<Value> argv[2] = {
-                args[0],
-                args[1]
+                info[0],
+                info[1]
             };
-            Local<Context> context = isolate->GetCurrentContext();
-            Local<Function> cons = Local<Function>::New(isolate, constructor);
-            Local<Object> ret = cons->NewInstance(context, 2, argv).ToLocalChecked();
-            args.GetReturnValue().Set(ret);
+            Local<Function> cons = Nan::New(constructor);
+            info.GetReturnValue().Set(Nan::NewInstance(cons, 2, argv).ToLocalChecked());
         }
     }
 
-    void KCPObject::GetContext(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::GetContext)
     {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        Isolate* isolate = info.GetIsolate();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         if (!thiz->context.IsEmpty()) {
-            args.GetReturnValue().Set(Local<Object>::New(isolate, thiz->context));
+            info.GetReturnValue().Set(Local<Object>::New(isolate, thiz->context));
         }
     }
 
-    void KCPObject::Release(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Release)
     {
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         delete thiz;
     }
 
-    void KCPObject::Recv(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Recv)
     {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        Isolate* isolate = info.GetIsolate();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         int bufsize = 0;
         char* buf = NULL;
         int buflen = 0;
@@ -203,20 +198,20 @@ namespace node_kcp
             free(buf);
         }
         if (len > 0) {
-            args.GetReturnValue().Set(
+            info.GetReturnValue().Set(
                 node::Buffer::Copy(isolate, (const char*)data, len).ToLocalChecked()
             );
         }
         free(data);
     }
 
-    void KCPObject::Input(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Input)
     {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        Isolate* isolate = info.GetIsolate();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
-        Local<Value> arg0 = args[0];
+        Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
             String::Value data(arg0);
             len = data.length();
@@ -232,7 +227,7 @@ namespace node_kcp
             string2char(data, len, buf);
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Number::New(isolate, t);
-            args.GetReturnValue().Set(ret);
+            info.GetReturnValue().Set(ret);
             free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
             len = node::Buffer::Length(arg0->ToObject());
@@ -242,17 +237,17 @@ namespace node_kcp
             buf = node::Buffer::Data(arg0->ToObject());
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Number::New(isolate, t);
-            args.GetReturnValue().Set(ret);
+            info.GetReturnValue().Set(ret);
         }
     }
 
-    void KCPObject::Send(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Send)
     {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        Isolate* isolate = info.GetIsolate();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
-        Local<Value> arg0 = args[0];
+        Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
             String::Value data(arg0);
             len = data.length();
@@ -268,7 +263,7 @@ namespace node_kcp
             string2char(data, len, buf);
             int t = ikcp_send(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Number::New(isolate, t);
-            args.GetReturnValue().Set(ret);
+            info.GetReturnValue().Set(ret);
             free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
             len = node::Buffer::Length(arg0->ToObject());
@@ -278,127 +273,113 @@ namespace node_kcp
             buf = node::Buffer::Data(arg0->ToObject());
             int t = ikcp_send(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Number::New(isolate, t);
-            args.GetReturnValue().Set(ret);
+            info.GetReturnValue().Set(ret);
         }
     }
 
-    void KCPObject::Output(const FunctionCallbackInfo<Value>& args)
+    NAN_METHOD(KCPObject::Output)
     {
-        if (!args[0]->IsFunction()) {
+        if (!info[0]->IsFunction()) {
             return;
         }
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        thiz->output.Reset(args.GetIsolate(), Local<Function>::Cast(args[0]));
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        thiz->output.Reset(Local<Function>::Cast(info[0]));
     }
 
-    void KCPObject::Update(const FunctionCallbackInfo<Value>& args)
+    NAN_METHOD(KCPObject::Update)
     {
-        Isolate* isolate = args.GetIsolate();
-
-        if (!args[0]->IsNumber()) {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "Wrong arguments")
-            ));
+        if (!info[0]->IsNumber()) {
+            Nan::ThrowTypeError("KCP update first argument must be number");
             return;
         }
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        auto arg0 = args[0]->IntegerValue();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        int64_t arg0 = To<int64_t>(info[0]).FromJust();
         IUINT32 current = (IUINT32)(arg0 & 0xfffffffful);
         ikcp_update(thiz->kcp, current);
     }
 
-    void KCPObject::Check(const FunctionCallbackInfo<Value>& args)
+    NAN_METHOD(KCPObject::Check)
     {
-        Isolate* isolate = args.GetIsolate();
-
-        if (!args[0]->IsNumber()) {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "Wrong arguments")
-            ));
+        if (!info[0]->IsNumber()) {
+            Nan::ThrowTypeError("KCP check first argument must be number");
             return;
         }
 
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        auto arg0 = args[0]->IntegerValue();
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        int64_t arg0 = To<int64_t>(info[0]).FromJust();
         IUINT32 current = (IUINT32)(arg0 & 0xfffffffful);
         IUINT32 ret = ikcp_check(thiz->kcp, current) - current;
-        Local<Integer> num = Integer::NewFromUnsigned(isolate, (uint32_t)(ret>0?ret:0));
-        args.GetReturnValue().Set(num);
+        Local<Integer> num = Nan::New((uint32_t)(ret>0?ret:0));
+        info.GetReturnValue().Set(num);
     }
 
-    void KCPObject::Flush(const FunctionCallbackInfo<Value>& args)
+    NAN_METHOD(KCPObject::Flush)
     {
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         ikcp_flush(thiz->kcp);
     }
 
-    void KCPObject::Peeksize(const FunctionCallbackInfo<Value>& args)
+    NAN_METHOD(KCPObject::Peeksize)
     {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_peeksize(thiz->kcp));
-        args.GetReturnValue().Set(ret);
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        Local<v8::Int32> ret = Nan::New(ikcp_peeksize(thiz->kcp));
+        info.GetReturnValue().Set(ret);
     }
 
-    void KCPObject::Setmtu(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Setmtu)
     {
-        Isolate* isolate = args.GetIsolate();
-
         int mtu = 1400;
-        if (args[0]->IsNumber()) {
-            mtu = args[0]->Int32Value();
+        if (info[0]->IsNumber()) {
+            mtu = To<int>(info[0]).FromJust();
         }
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_setmtu(thiz->kcp, mtu));
-        args.GetReturnValue().Set(ret);
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        Local<v8::Int32> ret = Nan::New(ikcp_setmtu(thiz->kcp, mtu));
+        info.GetReturnValue().Set(ret);
     }
 
-    void KCPObject::Wndsize(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Wndsize)
     {
-        Isolate* isolate = args.GetIsolate();
         int sndwnd = 32;
         int rcvwnd = 32;
-        if (args[0]->IsNumber()) {
-            sndwnd = args[0]->Int32Value();
+        if (info[0]->IsNumber()) {
+            sndwnd = To<int>(info[0]).FromJust();
         }
-        if (args[1]->IsNumber()) {
-            rcvwnd = args[1]->Int32Value();
+        if (info[1]->IsNumber()) {
+            rcvwnd = To<int>(info[1]).FromJust();
         }
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_wndsize(thiz->kcp, sndwnd, rcvwnd));
-        args.GetReturnValue().Set(ret);
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        Local<v8::Int32> ret = Nan::New(ikcp_wndsize(thiz->kcp, sndwnd, rcvwnd));
+        info.GetReturnValue().Set(ret);
     }
 
-    void KCPObject::Waitsnd(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Waitsnd)
     {
-        Isolate* isolate = args.GetIsolate();
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_waitsnd(thiz->kcp));
-        args.GetReturnValue().Set(ret);
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        Local<v8::Int32> ret = Nan::New(ikcp_waitsnd(thiz->kcp));
+        info.GetReturnValue().Set(ret);
     }
 
-    void KCPObject::Nodelay(const v8::FunctionCallbackInfo<v8::Value>& args)
+    NAN_METHOD(KCPObject::Nodelay)
     {
-        Isolate* isolate = args.GetIsolate();
         int nodelay = 0;
         int interval = 100;
         int resend = 0;
         int nc = 0;
-        if (args[0]->IsNumber()) {
-            nodelay = args[0]->Int32Value();
+        if (info[0]->IsNumber()) {
+            nodelay = To<int>(info[0]).FromJust();
         }
-        if (args[1]->IsNumber()) {
-            interval = args[1]->Int32Value();
+        if (info[1]->IsNumber()) {
+            interval = To<int>(info[1]).FromJust();
         }
-        if (args[2]->IsNumber()) {
-            resend = args[2]->Int32Value();
+        if (info[2]->IsNumber()) {
+            resend = To<int>(info[2]).FromJust();
         }
-        if (args[3]->IsNumber()) {
-            nc = args[3]->Int32Value();
+        if (info[3]->IsNumber()) {
+            nc = To<int>(info[3]).FromJust();
         }
-        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(args.Holder());
-        Local<Number> ret = Number::New(isolate, ikcp_nodelay(thiz->kcp, nodelay, interval, resend, nc));
-        args.GetReturnValue().Set(ret);
+        KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+        Local<v8::Int32> ret = Nan::New(ikcp_nodelay(thiz->kcp, nodelay, interval, resend, nc));
+        info.GetReturnValue().Set(ret);
     }
 
 }

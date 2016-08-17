@@ -17,41 +17,41 @@
 #ifndef KCPOBJECT_H
 #define KCPOBJECT_H
 
-#include <node.h>
-#include <node_object_wrap.h>
+#include <nan.h>
+#include <nan_object_wrap.h>
 #include "kcp/ikcp.h"
 
 namespace node_kcp {
 
-    class KCPObject : public node::ObjectWrap
+    class KCPObject : public Nan::ObjectWrap
     {
         public:
-            static void Init(v8::Local<v8::Object> exports);
+            static NAN_MODULE_INIT(Init);
 
         private:
-            explicit KCPObject(IUINT32 conv, void* user);
+            explicit KCPObject(IUINT32 conv);
             ~KCPObject();
 
-            static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Release(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void GetContext(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Recv(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Send(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Output(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Input(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Update(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Check(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Flush(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Peeksize(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Setmtu(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Wndsize(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Waitsnd(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static void Nodelay(const v8::FunctionCallbackInfo<v8::Value>& args);
-            static v8::Persistent<v8::Function> constructor;
+            static NAN_METHOD(New);
+            static NAN_METHOD(Release);
+            static NAN_METHOD(GetContext);
+            static NAN_METHOD(Recv);
+            static NAN_METHOD(Send);
+            static NAN_METHOD(Output);
+            static NAN_METHOD(Input);
+            static NAN_METHOD(Update);
+            static NAN_METHOD(Check);
+            static NAN_METHOD(Flush);
+            static NAN_METHOD(Peeksize);
+            static NAN_METHOD(Setmtu);
+            static NAN_METHOD(Wndsize);
+            static NAN_METHOD(Waitsnd);
+            static NAN_METHOD(Nodelay);
+            static Nan::Persistent<v8::Function> constructor;
             static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
             ikcpcb* kcp;
-            v8::Persistent<v8::Function> output;
-            v8::Persistent<v8::Object> context;
+            Nan::Persistent<v8::Function> output;
+            Nan::Persistent<v8::Object> context;
     };
 
 }

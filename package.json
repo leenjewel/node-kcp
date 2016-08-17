@@ -3,8 +3,16 @@
   "version": "1.0.3",
   "description": "KCP protocol for Node.js",
   "main": "node-kcp.node",
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "nan": "^2.4.0"
+  },
+  "devDependencies": {
+    "chai": "latest",
+    "mocha": "latest",
+    "grunt": "latest",
+    "grunt-mocha-test": "latest",
+    "grunt-contrib-clean": "latest"
+  },
   "scripts": {
     "test": "grunt",
     "install": "node-gyp rebuild"
@@ -25,12 +33,5 @@
   "bugs": {
     "url": "https://github.com/leenjewel/node-kcp/issues"
   },
-  "homepage": "https://github.com/leenjewel/node-kcp#readme",
-  "devDependencies": {
-      "chai": "latest",
-      "mocha": "latest",
-      "grunt": "latest",
-      "grunt-mocha-test": "latest",
-      "grunt-contrib-clean": "latest"
-  }
+  "homepage": "https://github.com/leenjewel/node-kcp#readme"
 }
