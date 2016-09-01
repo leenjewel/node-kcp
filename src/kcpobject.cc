@@ -175,11 +175,15 @@ namespace node_kcp
             tmplen = buflen;
             bufsize = ikcp_peeksize(thiz->kcp);
             if (bufsize <= 0) {
-                bufsize = RECV_BUFFER_SIZE;
+                break;
+            }
+            int align = bufsize % 4;
+            if (align) {
+                bufsize += 4 - align;
             }
             buf = (char*)malloc(bufsize);
             buflen = ikcp_recv(thiz->kcp, buf, bufsize);
-            if (buflen < 0) {
+            if (buflen <= 0) {
                 free(buf);
                 break;
             }

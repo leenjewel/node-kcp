@@ -1,8 +1,12 @@
 var kcp = require('./../build/Release/kcp');
-var kcpobj = new kcp.KCP(123, {address: '127.0.0.1', port: 41234});
+var kcpobj = new kcp.KCP(123, {address: '127.0.0.1', port: 3010});
 var dgram = require('dgram');
 var client = dgram.createSocket('udp4');
-var msg = 'hello----------------------------------------------------------world';
+var msg = JSON.stringify({
+    id: 'test',
+    route: 'test',
+    body: 'test'
+});
 var idx = 1;
 var interval = 200;
 
@@ -19,15 +23,14 @@ client.on('error', (err) => {
 
 client.on('message', (msg, rinfo) => {
     kcpobj.input(msg);
+    var recv = kcpobj.recv();
+    if (recv) {
+        kcpobj.send(msg+(idx++));
+    }
 });
 
 setInterval(() => {
     kcpobj.update(Date.now());
-    var recv = kcpobj.recv();
-    if (recv) {
-        console.log(`client recv ${recv}`);
-        kcpobj.send(msg+(idx++));
-    }
 }, interval);
 
-kcpobj.send(msg+(idx++));
+kcpobj.send(msg);
