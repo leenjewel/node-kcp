@@ -128,3 +128,7 @@ setInterval(() => {
 kcpobj.send(msg+(idx++));
 
 ```
+
+##About Pomelo and Pomelo-kcp
+
+If you want to use [node-kcp](https://github.com/leenjewel/node-kcp) in [pomelo](https://github.com/NetEase/pomelo/) server, you need [pomelo-kcp](https://github.com/leenjewel/pomelo-kcp)
