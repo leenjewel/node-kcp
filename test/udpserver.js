@@ -13,7 +13,7 @@ server.on('error', (err) => {
     server.close();
 });
 
-server.on('message', (msg, rinfo) => {
+server.on('message', (data, rinfo) => {
     var k = rinfo.address+'_'+rinfo.port;
     if (undefined === clients[k]) {
         var context = {
@@ -26,7 +26,13 @@ server.on('message', (msg, rinfo) => {
         clients[k] = kcpobj;
     }
     var kcpobj = clients[k];
-    kcpobj.input(msg);
+    kcpobj.input(data);
+    var recv = kcpobj.recv();
+    if (recv) {
+        recv = recv.toString();
+    	console.log(`server recv ${recv} from ${kcpobj.context().address}:${kcpobj.context().port}`);
+    	kcpobj.send('RE-'+recv);
+    }
 });
 
 server.on('listening', () => {
@@ -36,11 +42,6 @@ server.on('listening', () => {
         for (var k in clients) {
             var kcpobj = clients[k];
         	kcpobj.update(Date.now());
-        	var recv = kcpobj.recv();
-        	if (recv) {
-            	console.log(`server recv ${recv} from ${kcpobj.context().address}:${kcpobj.context().port}`);
-           		kcpobj.send('RE-'+recv);
-       	 	}
        	}
     }, interval);
 });
