@@ -172,7 +172,7 @@ namespace node_kcp
         char* tmp = NULL;
         int tmplen = 0;
         while(1) {
-            tmplen = buflen;
+            tmplen = len;
             bufsize = ikcp_peeksize(thiz->kcp);
             if (bufsize <= 0) {
                 break;
@@ -194,7 +194,7 @@ namespace node_kcp
                 memcpy(data, tmp, tmplen);
                 free(tmp);
             }
-            memcpy(data, buf, buflen);
+            memcpy(data + tmplen, buf, buflen);
             free(buf);
         }
         if (len > 0) {
