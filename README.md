@@ -1,4 +1,4 @@
-#node-kcp
+# node-kcp
 
 ======================================
 [![Build Status][1]][2] 
@@ -8,9 +8,9 @@
 
 [KCP Protocol](https://github.com/skywind3000/kcp) for Node.js
 
-##HowTo
+## HowTo
 
-###Build:
+### Build:
 
 ```
 npm install -g node-gyp
@@ -28,15 +28,15 @@ git submodule update
 node-gyp build
 ```
 
-##Example:
+## Example:
 
-###Install by npm
+### Install by npm
 
 ```
 npm install node-kcp
 ```
 
-###udpserver.js
+### udpserver.js
 
 ```
 var kcp = require('node-kcp');
@@ -90,7 +90,7 @@ server.bind(41234);
 
 ```
 
-###udpclient.js
+### udpclient.js
 
 ```
 var kcp = require('node-kcp');
@@ -129,6 +129,6 @@ kcpobj.send(msg+(idx++));
 
 ```
 
-##About Pomelo and Pomelo-kcp
+## About Pomelo and Pomelo-kcp
 
 If you want to use [node-kcp](https://github.com/leenjewel/node-kcp) in [pomelo](https://github.com/NetEase/pomelo/) server, you need [pomelo-kcp](https://github.com/leenjewel/pomelo-kcp)
