@@ -165,14 +165,13 @@ namespace node_kcp
     {
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         int bufsize = 0;
-        char* buf = NULL;
+        int allsize = 0;
+        int lstsize = 0;
         int buflen = 0;
         char* data = NULL;
+        char* temp = NULL;
         int len = 0;
-        char* tmp = NULL;
-        int tmplen = 0;
         while(1) {
-            tmplen = len;
             bufsize = ikcp_peeksize(thiz->kcp);
             if (bufsize <= 0) {
                 break;
@@ -181,28 +180,30 @@ namespace node_kcp
             if (align) {
                 bufsize += 4 - align;
             }
-            buf = (char*)malloc(bufsize);
-            buflen = ikcp_recv(thiz->kcp, buf, bufsize);
-            if (buflen <= 0) {
-                free(buf);
+            lstsize = allsize;
+            allsize += bufsize;
+            temp = (char*)realloc(data, allsize);
+            if (temp) {
+                data = temp;
+                buflen = ikcp_recv(thiz->kcp, data + lstsize, bufsize);
+                if (buflen <= 0) {
+                    break;
+                }
+                len += buflen;
+            } else {
+                Nan::ThrowError("realloc error");
+                len = 0;
                 break;
             }
-            len += buflen;
-            tmp = data;
-            data = (char*)malloc(len);
-            if (NULL != tmp) {
-                memcpy(data, tmp, tmplen);
-                free(tmp);
-            }
-            memcpy(data + tmplen, buf, buflen);
-            free(buf);
         }
         if (len > 0) {
             info.GetReturnValue().Set(
                 Nan::CopyBuffer((const char*)data, len).ToLocalChecked()
             );
         }
-        free(data);
+        if (data) {
+            free(data);
+        }
     }
 
     NAN_METHOD(KCPObject::Input)

@@ -30,7 +30,7 @@ server.on('message', (data, rinfo) => {
     var recv = kcpobj.recv();
     if (recv) {
         recv = recv.toString();
-    	console.log(`server recv ${recv} from ${kcpobj.context().address}:${kcpobj.context().port}`);
+    	console.log(`Server recv ${recv} from ${kcpobj.context().address}:${kcpobj.context().port}`);
     	kcpobj.send('RE-'+recv);
     }
 });

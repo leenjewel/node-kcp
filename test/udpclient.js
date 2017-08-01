@@ -25,6 +25,7 @@ client.on('message', (data, rinfo) => {
     kcpobj.input(data);
     var recv = kcpobj.recv();
     if (recv) {
+    	console.log(`Client recv ${recv} from ${kcpobj.context().address}:${kcpobj.context().port}`);
         kcpobj.send(msg+(idx++));
     }
 });
