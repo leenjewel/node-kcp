@@ -166,7 +166,6 @@ namespace node_kcp
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         int bufsize = 0;
         int allsize = 0;
-        int lstsize = 0;
         int buflen = 0;
         char* data = NULL;
         char* temp = NULL;
@@ -176,16 +175,15 @@ namespace node_kcp
             if (bufsize <= 0) {
                 break;
             }
-            int align = bufsize % 4;
-            if (align) {
-                bufsize += 4 - align;
-            }
-            lstsize = allsize;
             allsize += bufsize;
+            int align = allsize % 4;
+            if (align) {
+                allsize += 4 - align;
+            }
             temp = (char*)realloc(data, allsize);
             if (temp) {
                 data = temp;
-                buflen = ikcp_recv(thiz->kcp, data + lstsize, bufsize);
+                buflen = ikcp_recv(thiz->kcp, data + len, bufsize);
                 if (buflen <= 0) {
                     break;
                 }
