@@ -52,6 +52,8 @@ namespace node_kcp {
             ikcpcb* kcp;
             Nan::Persistent<v8::Function> output;
             Nan::Persistent<v8::Object> context;
+            char *recvBuff = NULL;
+            unsigned int recvBuffSize = 1024;
     };
 
 }
