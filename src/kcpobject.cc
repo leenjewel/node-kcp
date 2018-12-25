@@ -82,6 +82,7 @@ namespace node_kcp
     {
         kcp = ikcp_create(conv, this);
         kcp->output = KCPObject::kcp_output;
+        recvBuff = (char*)realloc(recvBuff, recvBuffSize);
     }
 
     KCPObject::~KCPObject()
@@ -89,6 +90,10 @@ namespace node_kcp
         if (kcp) {
             ikcp_release(kcp);
             kcp = NULL;
+        }
+        if (recvBuff) {
+            free(recvBuff);
+            recvBuff = NULL;
         }
         if (!output.IsEmpty()) {
             output.Reset();
@@ -158,17 +163,22 @@ namespace node_kcp
     NAN_METHOD(KCPObject::Release)
     {
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
-        delete thiz;
+        if (thiz->kcp) {
+            ikcp_release(thiz->kcp);
+            thiz->kcp = NULL;
+        }
+        if (thiz->recvBuff) {
+            free(thiz->recvBuff);
+            thiz->recvBuff = NULL;
+        }
     }
 
     NAN_METHOD(KCPObject::Recv)
     {
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         int bufsize = 0;
-        int allsize = 0;
+        unsigned int allsize = 0;
         int buflen = 0;
-        char* data = NULL;
-        char* temp = NULL;
         int len = 0;
         while(1) {
             bufsize = ikcp_peeksize(thiz->kcp);
@@ -176,31 +186,30 @@ namespace node_kcp
                 break;
             }
             allsize += bufsize;
-            int align = allsize % 4;
-            if (align) {
-                allsize += 4 - align;
-            }
-            temp = (char*)realloc(data, allsize);
-            if (temp) {
-                data = temp;
-                buflen = ikcp_recv(thiz->kcp, data + len, bufsize);
-                if (buflen <= 0) {
+            if (allsize > thiz->recvBuffSize) {
+                int align = allsize % 4;
+                if (align) {
+                    allsize += 4 - align;
+                }
+                thiz->recvBuffSize = allsize;
+                thiz->recvBuff = (char*)realloc(thiz->recvBuff, thiz->recvBuffSize);
+                if (!thiz->recvBuff) {
+                    Nan::ThrowError("realloc error");
+                    len = 0;
                     break;
                 }
-                len += buflen;
-            } else {
-                Nan::ThrowError("realloc error");
-                len = 0;
+            }
+
+            buflen = ikcp_recv(thiz->kcp, thiz->recvBuff + len, bufsize);
+            if (buflen <= 0) {
                 break;
             }
+            len += buflen;
         }
         if (len > 0) {
             info.GetReturnValue().Set(
-                Nan::CopyBuffer((const char*)data, len).ToLocalChecked()
+                Nan::CopyBuffer((const char*)thiz->recvBuff, len).ToLocalChecked()
             );
-        }
-        if (data) {
-            free(data);
         }
     }
 
