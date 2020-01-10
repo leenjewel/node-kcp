@@ -20,14 +20,6 @@
 
 #define RECV_BUFFER_SIZE 4096
 
-#define string2char(string, len, out) \
-    do {\
-    int __i__ = 0;\
-    for (; __i__ < len; __i__++) {\
-        out[__i__] = (char)((*string)[__i__]);\
-    }\
-    } while(0)
-
 namespace node_kcp
 {
     using v8::Context;
@@ -64,7 +56,6 @@ namespace node_kcp
                 Nan::New<Number>(len)
             };
             Callback callback(Nan::New<Function>(thiz->output));
-            // callback.Call(argc, argv);
             Nan::Call(callback, argc, argv);
         } else {
             const unsigned argc = 3;
@@ -74,7 +65,6 @@ namespace node_kcp
                 Nan::New<Object>(thiz->context)
             };
             Callback callback(Nan::New<Function>(thiz->output));
-            // callback.Call(argc, argv);
             Nan::Call(callback, argc, argv);
         }
         return len;
@@ -222,17 +212,13 @@ namespace node_kcp
         int len = 0;
         Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
-            Nan::MaybeLocal<v8::String> maybeData = Nan::To<v8::String>(arg0);
-            v8::Local<v8::String> localData;
-            if (!maybeData.ToLocal(&localData)) {
-                return;
-            }
-            Nan::Utf8String data(localData);
+            Nan::Utf8String data(arg0);
             len = data.length();
             if (0 == len) {
+                Nan::ThrowError("INput Nan Utf8String error");
                 return;
             }
-            int t = ikcp_input(thiz->kcp, (const char*)*data, len);
+            int t = ikcp_input(thiz->kcp, *data, len);
             Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
             free(buf);
@@ -260,16 +246,13 @@ namespace node_kcp
         int len = 0;
         Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
-            Nan::MaybeLocal<v8::String> maybeData = Nan::To<v8::String>(arg0);
-            v8::Local<v8::String> localData;
-            if (!maybeData.ToLocal(&localData)) {
-                return;
-            }
-            Nan::Utf8String data(localData);
+            Nan::Utf8String data(arg0);
+            len = data.length();
             if (0 == len) {
+                Nan::ThrowError("Send Nan Utf8String error");
                 return;
             }
-            int t = ikcp_send(thiz->kcp, (const char*)*data, len);
+            int t = ikcp_send(thiz->kcp, *data, len);
             Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
             free(buf);
