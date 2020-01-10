@@ -64,7 +64,8 @@ namespace node_kcp
                 Nan::New<Number>(len)
             };
             Callback callback(Nan::New<Function>(thiz->output));
-            callback.Call(argc, argv);
+            // callback.Call(argc, argv);
+            Nan::Call(callback, argc, argv);
         } else {
             const unsigned argc = 3;
             Local<Value> argv[argc] = {
@@ -73,7 +74,8 @@ namespace node_kcp
                 Nan::New<Object>(thiz->context)
             };
             Callback callback(Nan::New<Function>(thiz->output));
-            callback.Call(argc, argv);
+            // callback.Call(argc, argv);
+            Nan::Call(callback, argc, argv);
         }
         return len;
     }
@@ -218,9 +220,10 @@ namespace node_kcp
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
+        v8::Isolate* isolate = info.GetIsolate();
         Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
-            String::Value data(arg0);
+            String::Value data(isolate, arg0);
             len = data.length();
             if (0 == len) {
                 return;
@@ -235,11 +238,18 @@ namespace node_kcp
             info.GetReturnValue().Set(ret);
             free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
-            len = node::Buffer::Length(arg0->ToObject());
+            Nan::MaybeLocal<v8::Object> maybeObj = Nan::To<v8::Object>(arg0);
+            v8::Local<Object> obj;
+            if (!maybeObj.ToLocal(&obj)) {
+                return;
+            }
+            // len = node::Buffer::Length(arg0->ToObject(isolate));
+            len = node::Buffer::Length(obj);
             if (0 == len) {
                 return;
             }
-            buf = node::Buffer::Data(arg0->ToObject());
+            // buf = node::Buffer::Data(arg0->ToObject(isolate));
+            buf = node::Buffer::Data(obj);
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
@@ -251,9 +261,10 @@ namespace node_kcp
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
+        v8::Isolate* isolate = info.GetIsolate();
         Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
-            String::Value data(arg0);
+            String::Value data(isolate, arg0);
             len = data.length();
             if (0 == len) {
                 return;
@@ -268,11 +279,18 @@ namespace node_kcp
             info.GetReturnValue().Set(ret);
             free(buf);
         } else if (node::Buffer::HasInstance(arg0)) {
-            len = node::Buffer::Length(arg0->ToObject());
+            Nan::MaybeLocal<v8::Object> maybeObj = Nan::To<v8::Object>(arg0);
+            v8::Local<Object> obj;
+            if (!maybeObj.ToLocal(&obj)) {
+                return;
+            }
+            // len = node::Buffer::Length(arg0->ToObject(isolate));
+            len = node::Buffer::Length(obj);
             if (0 == len) {
                 return;
             }
-            buf = node::Buffer::Data(arg0->ToObject());
+            // buf = node::Buffer::Data(arg0->ToObject(isolate));
+            buf = node::Buffer::Data(obj);
             int t = ikcp_send(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
