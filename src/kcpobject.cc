@@ -220,20 +220,19 @@ namespace node_kcp
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
-        v8::Isolate* isolate = info.GetIsolate();
         Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
-            String::Value data(isolate, arg0);
+            Nan::MaybeLocal<v8::String> maybeData = Nan::To<v8::String>(arg0);
+            v8::Local<v8::String> localData;
+            if (!maybeData.ToLocal(&localData)) {
+                return;
+            }
+            Nan::Utf8String data(localData);
             len = data.length();
             if (0 == len) {
                 return;
             }
-            if (!(buf = (char*)malloc(len))) {
-                Nan::ThrowError("malloc error");
-                return;
-            }
-            string2char(data, len, buf);
-            int t = ikcp_input(thiz->kcp, (const char*)buf, len);
+            int t = ikcp_input(thiz->kcp, (const char*)*data, len);
             Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
             free(buf);
@@ -243,12 +242,10 @@ namespace node_kcp
             if (!maybeObj.ToLocal(&obj)) {
                 return;
             }
-            // len = node::Buffer::Length(arg0->ToObject(isolate));
             len = node::Buffer::Length(obj);
             if (0 == len) {
                 return;
             }
-            // buf = node::Buffer::Data(arg0->ToObject(isolate));
             buf = node::Buffer::Data(obj);
             int t = ikcp_input(thiz->kcp, (const char*)buf, len);
             Local<Number> ret = Nan::New(t);
@@ -261,20 +258,18 @@ namespace node_kcp
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         char* buf = NULL;
         int len = 0;
-        v8::Isolate* isolate = info.GetIsolate();
         Local<Value> arg0 = info[0];
         if (arg0->IsString()) {
-            String::Value data(isolate, arg0);
-            len = data.length();
+            Nan::MaybeLocal<v8::String> maybeData = Nan::To<v8::String>(arg0);
+            v8::Local<v8::String> localData;
+            if (!maybeData.ToLocal(&localData)) {
+                return;
+            }
+            Nan::Utf8String data(localData);
             if (0 == len) {
                 return;
             }
-            if (!(buf = (char*)malloc(len))) {
-                Nan::ThrowError("malloc error");
-                return;
-            }
-            string2char(data, len, buf);
-            int t = ikcp_send(thiz->kcp, (const char*)buf, len);
+            int t = ikcp_send(thiz->kcp, (const char*)*data, len);
             Local<Number> ret = Nan::New(t);
             info.GetReturnValue().Set(ret);
             free(buf);
