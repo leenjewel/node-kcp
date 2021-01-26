@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 leenjewel
+ * Copyright 2021 leenjewel
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,6 +115,7 @@ namespace node_kcp
         SetPrototypeMethod(tpl, "wndsize", Wndsize);
         SetPrototypeMethod(tpl, "waitsnd", Waitsnd);
         SetPrototypeMethod(tpl, "nodelay", Nodelay);
+        SetPrototypeMethod(tpl, "stream", Stream);
 
         constructor.Reset(GetFunction(tpl).ToLocalChecked());
         Set(target, Nan::New("KCP").ToLocalChecked(), GetFunction(tpl).ToLocalChecked());
@@ -197,6 +198,9 @@ namespace node_kcp
                 break;
             }
             len += buflen;
+            if (thiz->kcp->stream == 0) {
+                break;
+            }
         }
         if (len > 0) {
             info.GetReturnValue().Set(
@@ -378,6 +382,17 @@ namespace node_kcp
         KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
         Local<v8::Int32> ret = Nan::New(ikcp_nodelay(thiz->kcp, nodelay, interval, resend, nc));
         info.GetReturnValue().Set(ret);
+    }
+
+    NAN_METHOD(KCPObject::Stream)
+    {
+        if (info[0]->IsNumber()) {
+            int stream = To<int>(info[0]).FromJust();
+            KCPObject* thiz = ObjectWrap::Unwrap<KCPObject>(info.Holder());
+            thiz->kcp->stream = stream;
+            Local<v8::Int32> ret = Nan::New(thiz->kcp->stream);
+            info.GetReturnValue().Set(ret);
+        }
     }
 
 }

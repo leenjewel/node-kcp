@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 leenjewel
+ * Copyright 2021 leenjewel
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ namespace node_kcp {
             static NAN_METHOD(Wndsize);
             static NAN_METHOD(Waitsnd);
             static NAN_METHOD(Nodelay);
+            static NAN_METHOD(Stream);
             static Nan::Persistent<v8::Function> constructor;
             static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
             ikcpcb* kcp;

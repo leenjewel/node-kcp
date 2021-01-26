@@ -21,6 +21,7 @@ server.on('message', (data, rinfo) => {
             port : rinfo.port
         };
         var kcpobj = new kcp.KCP(123, context);
+        kcpobj.stream(1);
         kcpobj.nodelay(0, interval, 0, 0);
         kcpobj.output(output);
         clients[k] = kcpobj;
