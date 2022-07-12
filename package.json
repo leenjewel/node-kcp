@@ -1,10 +1,10 @@
 {
   "name": "node-kcp",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "KCP protocol for Node.js",
-  "main": "node-kcp.node",
+  "main": "include_dirs.js",
   "dependencies": {
-    "nan": "^2.14.0"
+    "nan": "^2.16.0"
   },
   "devDependencies": {
     "chai": "latest",
