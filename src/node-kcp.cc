@@ -26,7 +26,7 @@ namespace node_kcp {
         KCPObject::Init(exports);
     }
 
-    NODE_MODULE(kcp, InitModule)
+    NAN_MODULE_WORKER_ENABLED(kcp, InitModule)
 
 }
 
