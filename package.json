@@ -4,7 +4,8 @@
   "description": "KCP protocol for Node.js",
   "main": "include_dirs.js",
   "dependencies": {
-    "nan": "^2.16.0"
+    "nan": "^2.16.0",
+    "node-addon-api": "^5.0.0"
   },
   "devDependencies": {
     "chai": "latest",

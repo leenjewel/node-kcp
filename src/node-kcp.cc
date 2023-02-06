@@ -17,7 +17,14 @@
 #include "kcpobject.h"
 
 namespace node_kcp {
+#ifdef USE_NAPI
+    Napi::Object Init(Napi::Env env, Napi::Object exports)
+    {
+        return KCPObject::Init(env, exports);
+    }
 
+    NODE_API_MODULE(addon, Init)
+#else
     using v8::Local;
     using v8::Object;
 
@@ -27,6 +34,6 @@ namespace node_kcp {
     }
 
     NODE_MODULE(kcp, InitModule)
-
+#endif
 }
 

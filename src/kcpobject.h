@@ -17,21 +17,60 @@
 #ifndef KCPOBJECT_H
 #define KCPOBJECT_H
 
+#include "kcp/ikcp.h"
+
+#ifdef USE_NAPI
+#include <napi.h>
+#define NAPI_METHOD(m) Napi::Value m(const Napi::CallbackInfo& info)
+#else
 #include <nan.h>
 #include <nan_object_wrap.h>
-#include "kcp/ikcp.h"
+#endif
 
 namespace node_kcp {
 
+#ifdef USE_NAPI
+    class KCPObject : public Napi::ObjectWrap<KCPObject>
+#else
     class KCPObject : public Nan::ObjectWrap
+#endif
     {
         public:
+#ifdef USE_NAPI
+            KCPObject(const Napi::CallbackInfo&);
+            static Napi::Object Init(Napi::Env env, Napi::Object exports);
+#else
             static NAN_MODULE_INIT(Init);
-
-        private:
             explicit KCPObject(IUINT32 conv);
+#endif
+        private:
             ~KCPObject();
+            static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
+            ikcpcb* kcp;
+            char *recvBuff = NULL;
+            unsigned int recvBuffSize = 1024;
+#ifdef USE_NAPI
+            Napi::ThreadSafeFunction output;
+            bool outputFunctionHasSet = false;
+            Napi::ObjectReference context;
+            bool contextObjectHasSet = false;
 
+            NAPI_METHOD(Release);
+            NAPI_METHOD(GetContext);
+            NAPI_METHOD(Recv);
+            NAPI_METHOD(Send);
+            NAPI_METHOD(Output);
+            NAPI_METHOD(Input);
+            NAPI_METHOD(Update);
+            NAPI_METHOD(Check);
+            NAPI_METHOD(Flush);
+            NAPI_METHOD(Peeksize);
+            NAPI_METHOD(Setmtu);
+            NAPI_METHOD(Wndsize);
+            NAPI_METHOD(Waitsnd);
+            NAPI_METHOD(Nodelay);
+            NAPI_METHOD(Stream);
+#else
             static NAN_METHOD(New);
             static NAN_METHOD(Release);
             static NAN_METHOD(GetContext);
@@ -49,12 +88,9 @@ namespace node_kcp {
             static NAN_METHOD(Nodelay);
             static NAN_METHOD(Stream);
             static Nan::Persistent<v8::Function> constructor;
-            static int kcp_output(const char *buf, int len, ikcpcb *kcp, void *user);
-            ikcpcb* kcp;
             Nan::Persistent<v8::Function> output;
             Nan::Persistent<v8::Object> context;
-            char *recvBuff = NULL;
-            unsigned int recvBuffSize = 1024;
+#endif
     };
 
 }
