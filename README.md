@@ -39,7 +39,7 @@ npm install node-kcp
 
 ### udpserver.js
 
-```
+```js
 var kcp = require('node-kcp');
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
@@ -93,7 +93,7 @@ server.bind(41234);
 
 ### udpclient.js
 
-```
+```js
 var kcp = require('node-kcp');
 var kcpobj = new kcp.KCP(123, {address: '127.0.0.1', port: 41234});
 var dgram = require('dgram');
