@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 leenjewel
+ * Copyright 2025 leenjewel
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#ifdef USE_NAN
 #include "kcpobject.h"
 
 namespace node_kcp {
@@ -29,4 +29,4 @@ namespace node_kcp {
     NAN_MODULE_WORKER_ENABLED(kcp, InitModule)
 
 }
-
+#endif

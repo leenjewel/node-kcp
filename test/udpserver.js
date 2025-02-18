@@ -18,7 +18,10 @@ server.on('message', (data, rinfo) => {
     if (undefined === clients[k]) {
         var context = {
             address : rinfo.address,
-            port : rinfo.port
+            port : rinfo.port,
+            onoutput: function(data) {
+                server.send(data, 0, data.length, this.port, this.address);
+            }
         };
         var kcpobj = new kcp.KCP(123, context);
         kcpobj.stream(1);
